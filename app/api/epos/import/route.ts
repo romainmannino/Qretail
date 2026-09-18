@@ -2,7 +2,7 @@ import {NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 
-const db=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"https://wujraajfzrfgpeeteerp.supabase.co",process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const db=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"https://wujraajfzrfgpeeteerp.supabase.co",process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"sb_publishable_CmL3epmuHsTjbTqMkmjsLw_IO9q3J2V");
 const norm=(v:any)=>String(v??"").trim();
 const key=(v:string)=>v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
 const pick=(row:any,names:string[])=>{const entries=Object.entries(row);for(const n of names){const target=key(n);const exact=entries.find(([k])=>key(k)===target);if(exact&&norm(exact[1]))return norm(exact[1]);const partial=entries.find(([k])=>key(k).includes(target));if(partial&&norm(partial[1]))return norm(partial[1]);}return ""};
