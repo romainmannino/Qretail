@@ -1,5 +1,5 @@
 "use client";
-import {useRef,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
 
 function extractToken(raw){
@@ -12,61 +12,77 @@ function extractToken(raw){
     return i>=0&&parts[i+1]?decodeURIComponent(parts[i+1]):"";
   }catch{
     const m=value.match(/(?:^|\/)(?:q|r)\/([^?#/]+)/i);
-    return m?.[1]?decodeURIComponent(m[1]):value;
+    return m?.[1]?decodeURIComponent(m[1]):"";
   }
 }
 
 export default function Scan(){
   const router=useRouter();
-  const inputRef=useRef(null);
-  const [msg,setMsg]=useState("Photographiez le QR de l’affiche.");
-  const [busy,setBusy]=useState(false);
+  const scannerRef=useRef(null);
+  const handledRef=useRef(false);
+  const [status,setStatus]=useState("Initialisation de la caméra…");
+  const [error,setError]=useState("");
 
-  async function readImage(file){
-    if(!file)return;
-    setBusy(true); setMsg("Lecture du QR…");
-    try{
-      const {Html5Qrcode}=await import("html5-qrcode");
-      // scanFile() needs a real DOM element. It must NOT be display:none on iOS.
-      let reader;
+  useEffect(()=>{
+    let cancelled=false;
+    async function start(){
       try{
-        reader=new Html5Qrcode("qretail-file-reader");
-        const decoded=await reader.scanFile(file,true);
-        const token=extractToken(decoded);
-        if(!token)throw new Error("QRetail non reconnu");
-        setMsg("QR reconnu. Ouverture…");
-        window.location.href="/retailer/configure/"+encodeURIComponent(token);
-      }finally{
-        try{reader?.clear()}catch{}
+        const {Html5Qrcode}=await import("html5-qrcode");
+        if(cancelled)return;
+        const scanner=new Html5Qrcode("qretail-live-reader");
+        scannerRef.current=scanner;
+
+        const onSuccess=async decoded=>{
+          if(handledRef.current)return;
+          const token=extractToken(decoded);
+          if(!token)return;
+          handledRef.current=true;
+          setStatus("QR reconnu");
+          try{await scanner.stop()}catch{}
+          // IMPORTANT: the retailer scanner intercepts the QR URL and goes to
+          // configuration. The QR itself stays a consumer URL (/q/... or /r/...).
+          router.replace("/retailer/configure/"+encodeURIComponent(token));
+        };
+
+        await scanner.start(
+          {facingMode:"environment"},
+          {fps:12,qrbox:(w,h)=>{
+            const s=Math.floor(Math.min(w,h)*0.72);
+            return {width:s,height:s};
+          },aspectRatio:1},
+          onSuccess,
+          ()=>{}
+        );
+        if(!cancelled)setStatus("Placez le QR dans le cadre");
+      }catch(e){
+        console.error("Live QR camera failed",e);
+        if(!cancelled){
+          setError("Caméra indisponible. Autorisez l’accès à la caméra dans Safari puis rechargez la page.");
+          setStatus("");
+        }
       }
-    }catch(e){
-      console.error("QR file scan failed",e);
-      setBusy(false);
-      setMsg("QR non reconnu. Reprenez la photo en cadrant uniquement le QR.");
-      if(inputRef.current) inputRef.current.value="";
     }
-  }
+    start();
+    return ()=>{
+      cancelled=true;
+      const s=scannerRef.current;
+      if(s){Promise.resolve(s.stop()).catch(()=>{});}
+    };
+  },[router]);
 
   return <main className="scanner retailerScanner">
     <header><button onClick={()=>router.back()} aria-label="Retour">←</button><Logo/><span/></header>
     <section className="scannerIntro">
       <span className="eyebrow">CONFIGURATION PLV</span>
       <h1>Scannez le QR<br/>de l’affiche.</h1>
-      <p>Le QR identifie l’affiche physique. Vous choisirez ensuite le vélo à lui associer.</p>
+      <p>Visez simplement le QR. Dès qu’il est reconnu, la fiche de configuration s’ouvre automatiquement.</p>
     </section>
 
-    <button type="button" className="camera nativeCamera fileScanner" onClick={()=>inputRef.current?.click()} disabled={busy}>
-      <div className="fileScanInner">
-        <strong>{busy?"Lecture en cours…":"Ouvrir l’appareil photo"}</strong>
-        <span>Photographiez le QR de l’affiche</span>
-      </div>
-    </button>
-
-    <input ref={inputRef} type="file" accept="image/*" capture="environment"
-      style={{position:"absolute",width:1,height:1,opacity:0,pointerEvents:"none"}}
-      onChange={e=>readImage(e.target.files?.[0])}/>
-    <div id="qretail-file-reader" style={{position:"fixed",left:"-10000px",top:0,width:"320px",height:"320px",overflow:"hidden"}}/>
-    <p className="scanMessage">{msg}</p>
+    <div className="camera liveCamera">
+      <div id="qretail-live-reader"/>
+      <div className="scanFrame" aria-hidden="true"/>
+    </div>
+    <p className={error?"scanMessage scanError":"scanMessage"}>{error||status}</p>
   </main>
 }
 function Logo(){return <div className="logo darkLogo"><span>Q</span><span>R</span>etail</div>}
