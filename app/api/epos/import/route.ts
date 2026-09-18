@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
-const db=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const db=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"https://wujraajfzrfgpeeteerp.supabase.co",process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"sb_publishable_CmL3epmuHsTjbTqMkmjsLw_IO9q3J2V");
 const norm=(v:any)=>String(v??"").trim();
 const pick=(row:any,names:string[])=>{const keys=Object.keys(row);for(const n of names){const k=keys.find(x=>x.toLowerCase().replace(/[^a-z0-9]/g,"").includes(n));if(k&&norm(row[k]))return norm(row[k]);}return ""};
 export async function POST(req:Request){try{
