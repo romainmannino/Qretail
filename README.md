@@ -1,2 +1,9 @@
 # QRetail
-QR codes dynamiques pour PLV retail.\n\n## Installation\n1. Créer un projet Supabase et exécuter `supabase.sql`.\n2. Copier `.env.example` vers `.env.local` et renseigner les variables.\n3. `npm install && npm run dev`.\n4. Importer le repo dans Vercel et ajouter les mêmes variables.\n\nLe QR pointe vers `/r/:id`: si l'affiche est configurée, redirection vers l'URL; sinon vers l'écran de configuration.
+
+MVP 1 — le produit physique devient un point de contact digital.
+
+Stack : Next.js + Vercel + Supabase.
+
+Parcours : QR physique → fiche QRetail → page officielle marque → conservation / lead → analytics.
+
+Démo : /q/ORBEA-ORCA-DEMO
