@@ -23,21 +23,27 @@ export default function Scan(){
   const [busy,setBusy]=useState(false);
 
   async function readImage(file){
-    if(!file||busy)return;
-    setBusy(true);
-    setMsg("Lecture du QR…");
+    if(!file)return;
+    setBusy(true); setMsg("Lecture du QR…");
     try{
       const {Html5Qrcode}=await import("html5-qrcode");
-      const reader=new Html5Qrcode("qretail-file-reader");
-      const decoded=await reader.scanFile(file,true);
-      try{reader.clear()}catch{}
-      const token=extractToken(decoded);
-      if(!token)throw new Error("QRetail non reconnu");
-      setMsg("QR reconnu. Ouverture…");
-      window.location.assign("/retailer/configure/"+encodeURIComponent(token));
+      // scanFile() needs a real DOM element. It must NOT be display:none on iOS.
+      let reader;
+      try{
+        reader=new Html5Qrcode("qretail-file-reader");
+        const decoded=await reader.scanFile(file,true);
+        const token=extractToken(decoded);
+        if(!token)throw new Error("QRetail non reconnu");
+        setMsg("QR reconnu. Ouverture…");
+        window.location.href="/retailer/configure/"+encodeURIComponent(token);
+      }finally{
+        try{reader?.clear()}catch{}
+      }
     }catch(e){
+      console.error("QR file scan failed",e);
       setBusy(false);
       setMsg("QR non reconnu. Reprenez la photo en cadrant uniquement le QR.");
+      if(inputRef.current) inputRef.current.value="";
     }
   }
 
@@ -49,23 +55,17 @@ export default function Scan(){
       <p>Le QR identifie l’affiche physique. Vous choisirez ensuite le vélo à lui associer.</p>
     </section>
 
-    <div className="camera nativeCamera fileScanner" onClick={()=>!busy&&inputRef.current?.click()}>
+    <button type="button" className="camera nativeCamera fileScanner" onClick={()=>inputRef.current?.click()} disabled={busy}>
       <div className="fileScanInner">
-        <div className="cameraGlyph">⌑</div>
         <strong>{busy?"Lecture en cours…":"Ouvrir l’appareil photo"}</strong>
         <span>Photographiez le QR de l’affiche</span>
       </div>
-    </div>
+    </button>
 
-    <input
-      ref={inputRef}
-      type="file"
-      accept="image/*"
-      capture="environment"
-      hidden
-      onChange={e=>readImage(e.target.files?.[0])}
-    />
-    <div id="qretail-file-reader" style={{display:"none"}}/>
+    <input ref={inputRef} type="file" accept="image/*" capture="environment"
+      style={{position:"absolute",width:1,height:1,opacity:0,pointerEvents:"none"}}
+      onChange={e=>readImage(e.target.files?.[0])}/>
+    <div id="qretail-file-reader" style={{position:"fixed",left:"-10000px",top:0,width:"320px",height:"320px",overflow:"hidden"}}/>
     <p className="scanMessage">{msg}</p>
   </main>
 }
