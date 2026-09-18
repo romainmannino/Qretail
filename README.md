@@ -1,1 +1,2 @@
-# Qretail
+# QRetail
+QR codes dynamiques pour PLV retail.\n\n## Installation\n1. Créer un projet Supabase et exécuter `supabase.sql`.\n2. Copier `.env.example` vers `.env.local` et renseigner les variables.\n3. `npm install && npm run dev`.\n4. Importer le repo dans Vercel et ajouter les mêmes variables.\n\nLe QR pointe vers `/r/:id`: si l'affiche est configurée, redirection vers l'URL; sinon vers l'écran de configuration.
