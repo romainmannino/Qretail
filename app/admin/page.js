@@ -6,7 +6,8 @@ export default function Admin(){
  const[d,setD]=useState(null),[created,setCreated]=useState(""),[brandName,setBrandName]=useState(""),[brandWeb,setBrandWeb]=useState(""),[year,setYear]=useState("2027"),[catName,setCatName]=useState("EPOS 2027"),[source,setSource]=useState(""),[brandId,setBrandId]=useState(""),[eposFile,setEposFile]=useState(null),[importing,setImporting]=useState(false),[importMsg,setImportMsg]=useState("");
  const load=()=>dashboard().then(x=>{setD(x);if(!brandId&&x?.brands?.[0]?.id)setBrandId(x.brands[0].id)});
  useEffect(()=>{load()},[]);
- async function make(){const t=await createQr(null);setCreated(t);await load()}\n async function reset(token){if(!window.confirm("Réinitialiser cette affiche ? Elle redeviendra vierge."))return;await resetQr(token);await load()}
+ async function make(){const t=await createQr(null);setCreated(t);await load()}
+ async function reset(token){if(!window.confirm("Réinitialiser cette affiche ? Elle redeviendra vierge."))return;await resetQr(token);await load()}
  async function addBrand(){if(!brandName.trim())return;await createBrand(brandName,brandWeb);setBrandName("");setBrandWeb("");await load()}
  async function addCatalog(){if(!brandId||!catName.trim())return;await createCatalog(brandId,year,catName,source);setSource("");await load()}
  async function importEpos(){if(!eposFile||!brandId)return;setImporting(true);setImportMsg("");const fd=new FormData();fd.append("file",eposFile);fd.append("brandId",brandId);fd.append("year",year);fd.append("name",catName);try{const r=await fetch("/api/epos/import",{method:"POST",body:fd});const x=await r.json();if(!r.ok)throw new Error(x.error||"Import impossible");setImportMsg("✓ "+x.imported+" produits importés depuis "+x.file);setEposFile(null);await load()}catch(e){setImportMsg("Erreur : "+e.message)}finally{setImporting(false)}}
