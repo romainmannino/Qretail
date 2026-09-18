@@ -9,7 +9,6 @@ const pick=(row:any,names:string[])=>{const entries=Object.entries(row);for(cons
 
 export async function POST(req:Request){
  try{
-  if(!process.env.SUPABASE_SERVICE_ROLE_KEY)return NextResponse.json({error:"Configuration serveur incomplète : clé Supabase serveur absente."},{status:500});
   const form=await req.formData();
   const file=form.get("file") as File|null,brandId=norm(form.get("brandId")),year=Number(form.get("year")||new Date().getFullYear()),name=norm(form.get("name"))||("EPOS "+year);
   if(!file||!brandId)return NextResponse.json({error:"Fichier et marque obligatoires"},{status:400});
