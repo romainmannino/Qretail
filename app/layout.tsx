@@ -1,0 +1,1 @@
+export const metadata={title:"QRetail",description:"QR codes dynamiques pour le retail"};import "./globals.css";export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="fr"><body>{children}</body></html>}
