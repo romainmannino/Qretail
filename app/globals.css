@@ -15,3 +15,5 @@
 @media print{.productHero:after{left:auto!important;right:10mm!important;text-align:right!important}.consumer:after{content:none!important;display:none!important}}
 
 @media print{.productHero:after{content:none!important;display:none!important}}
+
+.brandLogo{display:block;width:108px;height:auto;max-height:28px;object-fit:contain;object-position:left center}@media print{.brandLogo{width:31mm!important;max-height:8mm!important;margin-bottom:2mm!important}}
