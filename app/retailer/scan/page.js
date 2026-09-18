@@ -4,55 +4,70 @@ import {useRouter} from "next/navigation";
 
 function extractToken(raw){
   const value=(raw||"").trim();
+  if(!value)return "";
   try{
     const u=new URL(value);
     const parts=u.pathname.split("/").filter(Boolean);
-    return parts[parts.length-1]||"";
+    const qIndex=parts.lastIndexOf("q");
+    const rIndex=parts.lastIndexOf("r");
+    const index=Math.max(qIndex,rIndex);
+    return index>=0&&parts[index+1]?decodeURIComponent(parts[index+1]):decodeURIComponent(parts[parts.length-1]||"");
   }catch{
-    return value.replace(/^.*\/q\//,"").replace(/^.*\/r\//,"").trim();
+    return value.replace(/^.*\/q\//,"").replace(/^.*\/r\//,"").split(/[?#]/)[0].trim();
   }
 }
 
 export default function Scan(){
   const router=useRouter();
   const scannerRef=useRef(null);
+  const lockedRef=useRef(false);
   const [msg,setMsg]=useState("Autorisez la caméra puis placez le QR dans le cadre.");
   const [manual,setManual]=useState("");
 
+  function go(decodedText){
+    if(lockedRef.current)return;
+    const token=extractToken(decodedText);
+    if(!token){setMsg("QR détecté mais non reconnu.");return}
+    lockedRef.current=true;
+    setMsg("QR détecté. Ouverture de l’affiche…");
+    if(scannerRef.current)scannerRef.current.stop().catch(()=>{});
+    // Hard navigation is intentional here: more reliable than a client router
+    // transition from an active iOS camera stream.
+    window.location.assign("/retailer/configure/"+encodeURIComponent(token));
+  }
+
   useEffect(()=>{
-    let active=true;
+    let mounted=true;
     let scanner;
     (async()=>{
       try{
         const {Html5Qrcode}=await import("html5-qrcode");
-        if(!active)return;
+        if(!mounted)return;
         scanner=new Html5Qrcode("qretail-reader");
         scannerRef.current=scanner;
-        const onSuccess=async(decodedText)=>{
-          const token=extractToken(decodedText);
-          if(!token)return;
-          active=false;
-          try{await scanner.stop()}catch{}
-          router.replace("/retailer/configure/"+encodeURIComponent(token));
-        };
         await scanner.start(
           {facingMode:"environment"},
-          {fps:10,qrbox:(w,h)=>{const s=Math.min(w,h,280);return {width:s,height:s}},aspectRatio:1},
-          onSuccess,
+          {fps:15,qrbox:(w,h)=>{const s=Math.min(w,h,300);return {width:s,height:s}},aspectRatio:1},
+          decodedText=>go(decodedText),
           ()=>{}
         );
-        setMsg("Placez le QR QRetail dans le cadre.");
+        if(mounted)setMsg("Placez le QR QRetail dans le cadre.");
       }catch(e){
-        setMsg("Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra dans votre navigateur.");
+        if(mounted)setMsg("Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra dans votre navigateur.");
       }
     })();
-    return()=>{active=false;if(scannerRef.current){scannerRef.current.stop().catch(()=>{});scannerRef.current.clear().catch(()=>{})}};
-  },[router]);
+    return()=>{
+      mounted=false;
+      if(scannerRef.current){
+        scannerRef.current.stop().catch(()=>{});
+        scannerRef.current.clear().catch(()=>{});
+      }
+    };
+  },[]);
 
   function test(e){
     e.preventDefault();
-    const token=extractToken(manual);
-    if(token)router.push("/retailer/configure/"+encodeURIComponent(token));
+    go(manual);
   }
 
   return <main className="scanner retailerScanner">
