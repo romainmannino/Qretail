@@ -14,11 +14,8 @@ export async function POST(req:Request){
   if(!file||!brandId)return NextResponse.json({error:"Fichier et marque obligatoires"},{status:400});
 
   const wb=XLSX.read(Buffer.from(await file.arrayBuffer()),{type:"buffer"});
-  let rows:any[]=[];
-  for(const sheetName of wb.SheetNames){
-    const candidate=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:""}) as any[];
-    if(candidate.length>rows.length)rows=candidate;
-  }
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{range:1,defval:"",raw:false}) as any[];
   if(!rows.length)return NextResponse.json({error:"Le fichier ne contient aucune ligne exploitable."},{status:400});
 
   const client=db();
@@ -34,15 +31,17 @@ export async function POST(req:Request){
   }
 
   const products=rows.map((r:any)=>{
-    const productName=pick(r,["Orbea Spain Product Name","Full EN Product Name","Full EN Product Name (Summarised Colour)","product name","model name","description","designation","modele","model","name","produit"]);
-    const model=pick(r,["model","modele","family","famille"]);
-    const sku=pick(r,["Product Code","sku","reference","ref","code article","article"]);
-    const color=pick(r,["Colour Code","color code","colour code","color","couleur"]);
-    const url=pick(r,["product url","url","link","lien"]);
-    const image=pick(r,["Image SIDE","SIDE2","Image FRONT","image url","image","photo"]);
-    const finalName=productName||model||sku;
-    if(!finalName)return null;
-    return {brand_id:brandId,catalog_id:cat.id,name:finalName,model:model||null,color_code:color||null,product_url:url||"",image_url:image||null,description:null,specs:{sku:sku||null,source_row:r}};
+    const productCode=norm(r["Product Code"]);
+    const productName=norm(r["Orbea Spain Product Name"])||norm(r["Full EN Product Name"])||norm(r["Full EN Product Name (Summarised Colour)"])||norm(r["Model"]);
+    if(!productCode||!productName)return null;
+    return {
+      brand_id:brandId,catalog_id:cat.id,name:productName,
+      model:norm(r["Model"])||norm(r["Model ID"])||null,
+      color_code:norm(r["Colour Code"])||null,
+      product_url:"",image_url:norm(r["Image SIDE"])||norm(r["SIDE2"])||norm(r["Image FRONT"])||null,
+      description:null,
+      specs:{product_code:productCode,model_id:norm(r["Model ID"])||null,family:norm(r["Family"])||null,size:norm(r["Size"])||null,fr_rrp:norm(r["FR RRP"])||null,ean:norm(r["EAN"])||null,source_row:r}
+    };
   }).filter(Boolean);
 
   if(!products.length){
