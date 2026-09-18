@@ -1,0 +1,13 @@
+"use client";
+import {useEffect,useState} from "react";
+import {getTag,track,lead} from "../../../lib/db";
+export default function Product({params}){const [tag,setTag]=useState(null),[loading,setLoading]=useState(true),[saved,setSaved]=useState(false),[form,setForm]=useState(false),[sent,setSent]=useState(false);
+ useEffect(()=>{Promise.resolve(params).then(p=>getTag(p.token)).then(t=>{setTag(t);setLoading(false);if(t)track(t)})},[params]);
+ if(loading)return <main className="consumer"><div className="loading">QRetail</div></main>;
+ if(!tag)return <main className="consumer"><div className="notfound"><Logo/><h1>QR non configuré</h1><p>Ce QR n'est pas encore associé à un produit.</p></div></main>;
+ const p=tag.products,b=p.brands;
+ async function submit(e){e.preventDefault();const f=new FormData(e.currentTarget);await lead({product_id:p.id,qr_tag_id:tag.id,first_name:f.get("first"),last_name:f.get("last"),phone:f.get("phone"),email:f.get("email"),consent:true});setSent(true)}
+ return <main className="consumer"><header className="productTop"><Logo/><span>{tag.retailers?.name||"En magasin"}</span></header><section className="productHero"><div className="brand">{b.name}</div><h1>{p.name}</h1><div className="meta">{p.color_code&&<span>Coloris {p.color_code}</span>}<span>Fiche officielle</span></div><p>{p.description}</p><a className="primary full" href={p.product_url} target="_blank">Voir la fiche {b.name}</a><button className="save full" onClick={()=>setSaved(!saved)}>{saved?"✓ Produit conservé":"Conserver ce produit"}</button><button className="textBtn" onClick={()=>setForm(!form)}>Recevoir la fiche et être recontacté</button></section>
+ {form&&<section className="lead">{sent?<div className="success"><b>C’est envoyé.</b><p>Vous pouvez revenir à la fiche produit.</p></div>:<form onSubmit={submit}><h2>Garder le contact</h2><p>Vos coordonnées sont transmises pour votre demande concernant ce produit.</p><div className="grid"><input name="first" placeholder="Prénom"/><input name="last" placeholder="Nom"/><input name="phone" placeholder="Téléphone"/><input name="email" type="email" placeholder="E-mail"/></div><label className="consent"><input type="checkbox" required/> J’accepte d’être recontacté au sujet de ce produit.</label><button className="primary full">Recevoir la fiche</button></form>}</section>}
+ <footer><span>Propulsé par</span><Logo/></footer></main>}
+function Logo(){return <div className="logo"><span>Q</span><span>R</span>etail</div>}
