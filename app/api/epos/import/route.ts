@@ -34,12 +34,12 @@ export async function POST(req:Request){
   }
 
   const products=rows.map((r:any)=>{
-    const productName=pick(r,["product name","model name","description","designation","modele","model","name","produit"]);
+    const productName=pick(r,["Orbea Spain Product Name","Full EN Product Name","Full EN Product Name (Summarised Colour)","product name","model name","description","designation","modele","model","name","produit"]);
     const model=pick(r,["model","modele","family","famille"]);
-    const sku=pick(r,["sku","reference","ref","code article","article"]);
-    const color=pick(r,["color code","colour code","color","couleur"]);
+    const sku=pick(r,["Product Code","sku","reference","ref","code article","article"]);
+    const color=pick(r,["Colour Code","color code","colour code","color","couleur"]);
     const url=pick(r,["product url","url","link","lien"]);
-    const image=pick(r,["image url","image","photo"]);
+    const image=pick(r,["Image SIDE","SIDE2","Image FRONT","image url","image","photo"]);
     const finalName=productName||model||sku;
     if(!finalName)return null;
     return {brand_id:brandId,catalog_id:cat.id,name:finalName,model:model||null,color_code:color||null,product_url:url||"",image_url:image||null,description:null,specs:{sku:sku||null,source_row:r}};
