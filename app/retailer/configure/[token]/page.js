@@ -34,7 +34,7 @@ export default function Configure(){
    return()=>{alive=false};
  },[]);
 
- const list=useMemo(()=>products.filter(p=>((p?.name||"")+" "+(p?.model||"")+" "+(p?.brands?.name||"")).toLowerCase().includes(q.toLowerCase())).slice(0,30),[products,q]);
+ const list=useMemo(()=>{const term=q.trim().toLowerCase();if(term.length<2)return [];return products.filter(p=>((p?.name||"")+" "+(p?.model||"")+" "+(p?.brands?.name||"")+" "+(p?.specs?.family||"")).toLowerCase().includes(term)).slice(0,30)},[products,q]);
 
  async function save(){
    if(!selected||!token)return;
