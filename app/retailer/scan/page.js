@@ -1,4 +1,79 @@
 "use client";
-import {useEffect,useRef,useState} from "react"; import {useRouter} from "next/navigation";
-export default function Scan(){const video=useRef(null),router=useRouter(),[msg,setMsg]=useState("Placez le QR dans le cadre");useEffect(()=>{let stream,stop=false;(async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}});video.current.srcObject=stream;await video.current.play();if(!("BarcodeDetector" in window)){setMsg("Scanner natif non disponible ici. Utilisez l’appareil photo du téléphone pour ouvrir le QR.");return}const detector=new BarcodeDetector({formats:["qr_code"]});const loop=async()=>{if(stop)return;try{const codes=await detector.detect(video.current);if(codes[0]?.rawValue){let v=codes[0].rawValue;try{const u=new URL(v);v=u.pathname.split("/").filter(Boolean).pop()}catch{}stop=true;router.replace("/retailer/configure/"+encodeURIComponent(v));return}}catch{}requestAnimationFrame(loop)};loop()}catch{setMsg("Autorisez l’accès à l’appareil photo pour scanner.")}})();return()=>{stop=true;stream?.getTracks().forEach(t=>t.stop())}},[router]);return <main className="scanner"><header><button onClick={()=>router.back()}>←</button><Logo/><span/></header><div className="camera"><video ref={video} playsInline muted/><div className="scanFrame"><i/><i/><i/><i/></div></div><p>{msg}</p></main>}
+import {useEffect,useRef,useState} from "react";
+import {useRouter} from "next/navigation";
+
+function extractToken(raw){
+  const value=(raw||"").trim();
+  try{
+    const u=new URL(value);
+    const parts=u.pathname.split("/").filter(Boolean);
+    return parts[parts.length-1]||"";
+  }catch{
+    return value.replace(/^.*\/q\//,"").replace(/^.*\/r\//,"").trim();
+  }
+}
+
+export default function Scan(){
+  const router=useRouter();
+  const scannerRef=useRef(null);
+  const [msg,setMsg]=useState("Autorisez la caméra puis placez le QR dans le cadre.");
+  const [manual,setManual]=useState("");
+
+  useEffect(()=>{
+    let active=true;
+    let scanner;
+    (async()=>{
+      try{
+        const {Html5Qrcode}=await import("html5-qrcode");
+        if(!active)return;
+        scanner=new Html5Qrcode("qretail-reader");
+        scannerRef.current=scanner;
+        const onSuccess=async(decodedText)=>{
+          const token=extractToken(decodedText);
+          if(!token)return;
+          active=false;
+          try{await scanner.stop()}catch{}
+          router.replace("/retailer/configure/"+encodeURIComponent(token));
+        };
+        await scanner.start(
+          {facingMode:"environment"},
+          {fps:10,qrbox:(w,h)=>{const s=Math.min(w,h,280);return {width:s,height:s}},aspectRatio:1},
+          onSuccess,
+          ()=>{}
+        );
+        setMsg("Placez le QR QRetail dans le cadre.");
+      }catch(e){
+        setMsg("Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra dans votre navigateur.");
+      }
+    })();
+    return()=>{active=false;if(scannerRef.current){scannerRef.current.stop().catch(()=>{});scannerRef.current.clear().catch(()=>{})}};
+  },[router]);
+
+  function test(e){
+    e.preventDefault();
+    const token=extractToken(manual);
+    if(token)router.push("/retailer/configure/"+encodeURIComponent(token));
+  }
+
+  return <main className="scanner retailerScanner">
+    <header><button onClick={()=>router.back()} aria-label="Retour">←</button><Logo/><span/></header>
+    <section className="scannerIntro">
+      <span className="eyebrow">CONFIGURATION PLV</span>
+      <h1>Scannez le QR<br/>de l’affiche.</h1>
+      <p>Le scan identifie l’affiche physique. Vous choisirez ensuite le vélo à lui associer.</p>
+    </section>
+    <div className="camera nativeCamera">
+      <div id="qretail-reader"/>
+      <div className="scanCorners"><i/><i/><i/><i/></div>
+    </div>
+    <p className="scanMessage">{msg}</p>
+    <details className="scanTest">
+      <summary>Test sur ordinateur</summary>
+      <form onSubmit={test}>
+        <input value={manual} onChange={e=>setManual(e.target.value)} placeholder="URL ou token du QR"/>
+        <button className="secondary full">Continuer</button>
+      </form>
+    </details>
+  </main>
+}
 function Logo(){return <div className="logo darkLogo"><span>Q</span><span>R</span>etail</div>}
