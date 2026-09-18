@@ -19,11 +19,20 @@ export default function Configure(){
     let alive=true;
     (async()=>{
       try{
-        const [t,p]=await Promise.all([getTag(token),getProducts()]);
+        // Load separately: one denied relation must never crash the whole page.
+        const t=await getTag(token);
         if(!alive)return;
         setTag(t);
-        setProducts(Array.isArray(p)?p:[]);
+        if(!t){setError("Ce QR n’appartient pas au parc QRetail.");return;}
+        try{
+          const p=await getProducts();
+          if(alive)setProducts(Array.isArray(p)?p:[]);
+        }catch(e){
+          console.error("Products loading failed",e);
+          if(alive)setError("QR reconnu, mais le catalogue produits n’a pas pu être chargé.");
+        }
       }catch(e){
+        console.error("QR loading failed",e);
         if(alive)setError("Impossible de charger ce QR pour le moment.");
       }finally{
         if(alive)setLoading(false);
@@ -35,7 +44,7 @@ export default function Configure(){
   const list=useMemo(()=>products.filter(p=>{
     const brand=p?.brands?.name||"";
     return ((p?.name||"")+" "+(p?.model||"")+" "+brand).toLowerCase().includes(q.toLowerCase());
-  }).slice(0,12),[products,q]);
+  }).slice(0,30),[products,q]);
 
   async function save(){
     if(!selected||!token)return;
@@ -49,8 +58,7 @@ export default function Configure(){
   }
 
   if(loading)return <main className="retailerApp"><div className="retailerBody"><Logo/><p>Lecture du QR…</p></div></main>;
-  if(error&&!tag)return <main className="retailerApp"><div className="retailerBody"><Logo/><h2>QR non disponible</h2><p>{error}</p><a className="secondary full linkButton" href="/retailer/scan">Scanner à nouveau</a></div></main>;
-  if(!tag)return <main className="retailerApp"><div className="retailerBody"><Logo/><h2>QR inconnu</h2><p>Ce QR n’appartient pas au parc QRetail.</p><a className="secondary full linkButton" href="/retailer/scan">Scanner à nouveau</a></div></main>;
+  if(!tag)return <main className="retailerApp"><div className="retailerBody"><Logo/><h2>QR inconnu</h2><p>{error||"Ce QR n’appartient pas au parc QRetail."}</p><a className="secondary full linkButton" href="/retailer/scan">Scanner à nouveau</a></div></main>;
 
   if(done)return <main className="retailerApp">
     <header className="retailerHead"><Logo/><span>Affiche configurée</span></header>
@@ -74,12 +82,12 @@ export default function Configure(){
       <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Ex. Orca M30"/>
       <div className="productList">
         {list.map(p=><button type="button" key={p.id} className={selected?.id===p.id?"productChoice selected":"productChoice"} onClick={()=>setSelected(p)}>
-          <span><b>{p.name}</b><small>{p.brands?.name||"Marque"} · {p.color_code?"Coloris "+p.color_code:"Catalogue"}</small></span>
+          <span><b>{p.name}</b><small>{p.brands?.name||"Orbea"} · {p.model||p.color_code||"Catalogue"}</small></span>
           <i>{selected?.id===p.id?"✓":"›"}</i>
         </button>)}
       </div>
-      {!list.length&&<p>Aucun produit correspondant dans l’EPOS importé.</p>}
-      {error&&<p>{error}</p>}
+      {!list.length&&!error&&<p>Aucun produit disponible dans l’EPOS importé.</p>}
+      {error&&<p className="scanError">{error}</p>}
       {selected&&<button type="button" className="primary full stickySave" onClick={save}>Associer {selected.name} à cette affiche</button>}
     </section>
   </main>
