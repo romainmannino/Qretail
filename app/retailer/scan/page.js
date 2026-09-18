@@ -8,12 +8,12 @@ function extractToken(raw){
   try{
     const u=new URL(value);
     const parts=u.pathname.split("/").filter(Boolean);
-    const qIndex=parts.lastIndexOf("q");
-    const rIndex=parts.lastIndexOf("r");
-    const index=Math.max(qIndex,rIndex);
-    return index>=0&&parts[index+1]?decodeURIComponent(parts[index+1]):decodeURIComponent(parts[parts.length-1]||"");
+    const qi=parts.lastIndexOf("q"),ri=parts.lastIndexOf("r");
+    const i=Math.max(qi,ri);
+    return i>=0&&parts[i+1]?decodeURIComponent(parts[i+1]):"";
   }catch{
-    return value.replace(/^.*\/q\//,"").replace(/^.*\/r\//,"").split(/[?#]/)[0].trim();
+    const m=value.match(/(?:^|\/)(?:q|r)\/([^?#/]+)/i);
+    return m?.[1]?decodeURIComponent(m[1]):value;
   }
 }
 
@@ -22,53 +22,47 @@ export default function Scan(){
   const scannerRef=useRef(null);
   const lockedRef=useRef(false);
   const [msg,setMsg]=useState("Autorisez la caméra puis placez le QR dans le cadre.");
+  const [detected,setDetected]=useState(false);
   const [manual,setManual]=useState("");
 
-  function go(decodedText){
+  function go(raw){
     if(lockedRef.current)return;
-    const token=extractToken(decodedText);
-    if(!token){setMsg("QR détecté mais non reconnu.");return}
+    const token=extractToken(raw);
+    if(!token){setMsg("QR détecté mais URL QRetail non reconnue.");return}
     lockedRef.current=true;
-    setMsg("QR détecté. Ouverture de l’affiche…");
-    if(scannerRef.current)scannerRef.current.stop().catch(()=>{});
-    // Hard navigation is intentional here: more reliable than a client router
-    // transition from an active iOS camera stream.
-    window.location.assign("/retailer/configure/"+encodeURIComponent(token));
+    setDetected(true);
+    setMsg("QR reconnu. Ouverture…");
+    // Navigate immediately. Do not await camera shutdown on iOS.
+    window.location.href="/retailer/configure/"+encodeURIComponent(token);
   }
 
   useEffect(()=>{
     let mounted=true;
-    let scanner;
     (async()=>{
       try{
         const {Html5Qrcode}=await import("html5-qrcode");
         if(!mounted)return;
-        scanner=new Html5Qrcode("qretail-reader");
+        const scanner=new Html5Qrcode("qretail-reader");
         scannerRef.current=scanner;
         await scanner.start(
-          {facingMode:"environment"},
-          {fps:15,qrbox:(w,h)=>{const s=Math.min(w,h,300);return {width:s,height:s}},aspectRatio:1},
-          decodedText=>go(decodedText),
+          {facingMode:{ideal:"environment"}},
+          {fps:20,qrbox:{width:300,height:300},disableFlip:false},
+          (decodedText)=>go(decodedText),
           ()=>{}
         );
         if(mounted)setMsg("Placez le QR QRetail dans le cadre.");
       }catch(e){
-        if(mounted)setMsg("Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra dans votre navigateur.");
+        if(mounted)setMsg("Caméra indisponible. Vérifiez son autorisation.");
       }
     })();
     return()=>{
       mounted=false;
-      if(scannerRef.current){
-        scannerRef.current.stop().catch(()=>{});
-        scannerRef.current.clear().catch(()=>{});
-      }
+      const s=scannerRef.current;
+      if(s){try{s.stop().then(()=>s.clear()).catch(()=>{})}catch{}}
     };
   },[]);
 
-  function test(e){
-    e.preventDefault();
-    go(manual);
-  }
+  function test(e){e.preventDefault();go(manual)}
 
   return <main className="scanner retailerScanner">
     <header><button onClick={()=>router.back()} aria-label="Retour">←</button><Logo/><span/></header>
@@ -79,14 +73,14 @@ export default function Scan(){
     </section>
     <div className="camera nativeCamera">
       <div id="qretail-reader"/>
-      <div className="scanCorners"><i/><i/><i/><i/></div>
+      <div className={"scanCorners"+(detected?" detected":"")}><i/><i/><i/><i/></div>
     </div>
     <p className="scanMessage">{msg}</p>
     <details className="scanTest">
-      <summary>Test sur ordinateur</summary>
+      <summary>Diagnostic / test</summary>
       <form onSubmit={test}>
-        <input value={manual} onChange={e=>setManual(e.target.value)} placeholder="URL ou token du QR"/>
-        <button className="secondary full">Continuer</button>
+        <input value={manual} onChange={e=>setManual(e.target.value)} placeholder="Collez l’URL du QR"/>
+        <button className="secondary full">Ouvrir ce QR</button>
       </form>
     </details>
   </main>
