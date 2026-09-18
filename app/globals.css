@@ -13,3 +13,5 @@
 @media print{.components{display:grid!important;grid-template-columns:1fr 1fr!important;column-gap:7mm!important}.components h2{grid-column:1/-1!important}.primarySpecs{grid-column:1!important}.printSecondary{grid-column:2!important;display:block!important}.screenSecondary{display:none!important}.primarySpecs .componentRow,.printSecondary .componentRow{display:grid!important;grid-template-columns:25mm 1fr!important}.productHero:after{content:"QRetail"!important;left:10mm!important;right:auto!important;text-align:left!important}}
 
 @media print{.productHero:after{left:auto!important;right:10mm!important;text-align:right!important}.consumer:after{content:none!important;display:none!important}}
+
+@media print{.productHero:after{content:none!important;display:none!important}}
