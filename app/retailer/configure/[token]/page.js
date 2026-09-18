@@ -24,8 +24,7 @@ export default function Configure(){
        if(!alive)return;
        setTag(qr);
        if(!qr){setError("Ce QR n’appartient pas au parc QRetail.");return}
-       const p=await getProducts();
-       if(alive)setProducts(Array.isArray(p)?p:[]);
+       if(alive)setProducts([]);
      }catch(e){
        console.error("CONFIGURE_LOAD",e);
        if(alive)setError("Impossible de charger les données de configuration.");
@@ -33,6 +32,17 @@ export default function Configure(){
    })();
    return()=>{alive=false};
  },[]);
+
+ useEffect(()=>{
+   const term=q.trim();
+   if(term.length<2){setProducts([]);return}
+   let alive=true;
+   const timer=setTimeout(async()=>{
+     try{const p=await getProducts(term);if(alive)setProducts(Array.isArray(p)?p:[])}
+     catch(e){console.error("PRODUCT_SEARCH",e);if(alive)setProducts([])}
+   },250);
+   return()=>{alive=false;clearTimeout(timer)}
+ },[q]);
 
  const list=useMemo(()=>{const term=q.trim().toLowerCase();if(term.length<2)return [];return products.filter(p=>((p?.name||"")+" "+(p?.model||"")+" "+(p?.brands?.name||"")+" "+(p?.specs?.family||"")).toLowerCase().includes(term)).slice(0,30)},[products,q]);
 
