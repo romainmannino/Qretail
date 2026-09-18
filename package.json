@@ -13,7 +13,8 @@
     "react-dom": "19.1.1",
     "@supabase/supabase-js": "2.57.4",
     "html5-qrcode": "2.3.8",
-    "qrcode": "1.5.4"
+    "qrcode": "1.5.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "typescript": "^5.9.2",
