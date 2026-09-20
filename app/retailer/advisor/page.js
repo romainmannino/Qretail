@@ -41,7 +41,16 @@ export default function Advisor(){
  function saveBrands(){if(!brands.length)return;localStorage.setItem("qretail_store_brands",JSON.stringify(brands));setConfigured(true)}
  const available=useMemo(()=>BIKES.filter(b=>brands.includes(b.brand)),[brands]);
  const found=useMemo(()=>{const q=query.trim().toLowerCase();return q.length<2?[]:BIKES.filter(b=>(b.brand+" "+b.model).toLowerCase().includes(q)).slice(0,8)},[query]);
- function finish(next){const a={...answers,...next};setAnswers(a);setResult(available.map(b=>({...b,match:scoreBike(b,a)})).sort((x,y)=>y.match-x.match).slice(0,3));setMode("results")}
+ function finish(next){
+  const a={...answers,...next};setAnswers(a);setReference(null);
+  const ranked=available.map(b=>({...b,match:scoreBike(b,a)})).sort((x,y)=>y.match-x.match);
+  let top=ranked.slice(0,3);
+  if(!top.some(b=>b.brand==="Orbea")){
+    const orbea=ranked.find(b=>b.brand==="Orbea")||BIKES.filter(b=>b.brand==="Orbea").map(b=>({...b,match:scoreBike(b,a)})).sort((x,y)=>y.match-x.match)[0];
+    if(orbea)top=[...top.slice(0,2),{...orbea,brandPresence:true}];
+  }
+  setResult(top);setMode("results")
+}
  function compareFrom(b){setReference(b);let pool=available.filter(x=>x.id!==b.id);if(!brands.includes(b.brand))pool=available;pool=pool.map(x=>({...x,match:(x.category===b.category?6:0)+(5-Math.min(5,Math.abs(x.price-b.price)/500))*2+x.scores.performance})).sort((x,y)=>y.match-x.match).slice(0,3);setResult([b,...pool]);setMode("results")}
  if(!configured)return <Shell right="Configuration magasin"><section className="advisorWrap"><span className="eyebrow">CONSEILLER UN CLIENT</span><h1>Vos marques,<br/>vos alternatives.</h1><p className="advisorIntro">Sélectionnez les marques proposées par votre magasin. Ce choix sera mémorisé sur cet appareil pour le prototype.</p><div className="brandGrid">{BRANDS.map(b=><button key={b} onClick={()=>setBrands(v=>v.includes(b)?v.filter(x=>x!==b):[...v,b])} className={"brandPick "+(brands.includes(b)?"active":"")}><b>{b}</b><span>{brands.includes(b)?"Sélectionnée":"Ajouter"}</span></button>)}</div><button className="advisorPrimary" disabled={!brands.length} onClick={saveBrands}>Enregistrer mes marques</button></section></Shell>;
  if(mode==="home")return <Shell right={<button className="headLink" onClick={()=>setConfigured(false)}>Marques du magasin · Modifier</button>}><section className="advisorWrap"><span className="eyebrow">CONSEILLER UN CLIENT</span><h1>Comment voulez-vous<br/>commencer ?</h1><p className="advisorIntro">Partez du besoin du client ou directement d'un vélo qu'il a déjà en tête.</p><div className="entryGrid"><button onClick={()=>{setStep(0);setAnswers({});setMode("quiz")}}><span>01</span><h2>Trouver le vélo adapté</h2><p>6 questions simples sur sa pratique, ses priorités et son budget.</p><b>Commencer →</b></button><button onClick={()=>setMode("search")}><span>02</span><h2>Je connais déjà un vélo</h2><p>Recherchez n'importe quel vélo de la base test et découvrez les alternatives du magasin.</p><b>Rechercher →</b></button></div><p className="pocNote">Prototype test · Base comparative Route / Orca M30 & M30i enrichie à partir du travail de comparaison existant.</p></section></Shell>;
