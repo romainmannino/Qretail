@@ -59,7 +59,7 @@ export default function Scan(){
  },[router]);
 
  return <main className="scanner retailerScanner">
-   <header><button onClick={()=>router.back()} aria-label="Retour">←</button><Logo/><span/></header>
+   <header><button onClick={()=>router.back()} aria-label="Retour">←</button><span/><span/></header>
    <section className="scannerIntro"><span className="eyebrow">CONFIGURATION PLV</span><h1>Scannez le QR<br/>de l’affiche.</h1><p>Le scan commerçant reconnaît l’affiche et ouvre directement le choix du vélo.</p></section>
    <div className="camera liveCamera"><div id="qretail-live-reader"/></div>
    <p className={error?"scanMessage scanError":"scanMessage"}>{error||status}</p>
