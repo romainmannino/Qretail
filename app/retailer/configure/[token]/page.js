@@ -53,7 +53,7 @@ export default function Configure(){
  useEffect(()=>{if(!modelChoice)return;const match=variants.find(p=>(!size||p?.specs?.size===size)&&(!color||p?.color_code===color))||variants[0]||null;setSelected(match)},[modelChoice,size,color,variants]);
 
  async function saveUrl(){
-   let target=url.trim();if(!/^https?:\\/\\//i.test(target)){setError("L’URL doit commencer par https:// ou http://");return}
+   let target=url.trim();if(!/^https?:\/\//i.test(target)){setError("L’URL doit commencer par https:// ou http://");return}
    setError("");try{const ok=await configureTagUrl(token,target);if(!ok){setError("La redirection n’a pas pu être enregistrée.");return}setDone(true)}catch(e){console.error("CONFIGURE_URL_SAVE",e);setError("La redirection n’a pas pu être enregistrée.")}
  }
 
