@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import {getTag,getModelColorVariants,track,lead} from "../../../lib/db";
 
 export default function Product(){
- const[token,setToken]=useState(""),[tag,setTag]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[showSpecs,setShowSpecs]=useState(false),[form,setForm]=useState(false),[sent,setSent]=useState(false),[colorVariants,setColorVariants]=useState([]);
+ const[token,setToken]=useState(""),[tag,setTag]=useState(null),[loading,setLoading]=useState(true),[redirecting,setRedirecting]=useState(false),[error,setError]=useState(""),[showSpecs,setShowSpecs]=useState(false),[form,setForm]=useState(false),[sent,setSent]=useState(false),[colorVariants,setColorVariants]=useState([]);
  useEffect(()=>{
    const raw=window.location.pathname.split("/").filter(Boolean).pop()||"";
    let t=raw;try{t=decodeURIComponent(raw)}catch{}
@@ -13,12 +13,12 @@ export default function Product(){
      const data=await getTag(t);
      if(!alive)return;
      setTag(data);
-     if(data?.destination_type==="url"&&data?.destination_url){track(data).catch(()=>{});window.location.replace(data.destination_url);return}
+     if(data?.destination_type==="url"&&data?.destination_url){setRedirecting(true);track(data).catch(()=>{});window.location.replace(data.destination_url);return}
      if(data?.product_id){track(data).catch(()=>{});const m=data?.products?.model;if(m)getModelColorVariants(m,data?.products?.catalog_id||"").then(v=>{if(alive)setColorVariants(v)}).catch(()=>{})}
    }catch(e){console.error("CONSUMER_LOAD",e);if(alive)setError("Impossible de charger la fiche pour le moment.")}finally{if(alive)setLoading(false)}})();
    return()=>{alive=false};
  },[]);
- if(loading)return <main className="consumer"><div className="loading">QRetail</div></main>;
+ if(loading||redirecting)return <main className="consumer"><div className="loading">Ouverture…</div></main>;
  if(error)return <main className="consumer"><div className="notfound"><h1>Fiche indisponible</h1><p>{error}</p></div></main>;
  if(!tag||!tag.product_id||!tag.products)return <main className="consumer"><div className="notfound"><h1>QR non configuré</h1><p>Ce QR n'est pas encore associé à un produit.</p></div></main>;
  const p=tag.products,b=p.brands||{},s=p.specs?.source_row||{};
