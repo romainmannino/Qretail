@@ -69,10 +69,10 @@ export default function Configure(){
 
  if(loading)return <main className="retailerApp"><div className="retailerBody"><p>Lecture du QR…</p></div></main>;
  if(!tag)return <main className="retailerApp"><div className="retailerBody"><h2>QR inconnu</h2><p>{error||"Ce QR n’appartient pas au parc QRetail."}</p><a className="secondary full linkButton" href="/retailer/scan">Scanner à nouveau</a></div></main>;
- if(done)return <main className="retailerApp"><header className="retailerHead"><span>Affiche configurée</span></header><section className="retailerBody done"><div className="doneMark">✓</div><span className="eyebrow">AFFICHE CONFIGURÉE</span><h2>{destination==="url"?"Redirection web":(selected?.name||"Produit")}</h2><p>{destination==="url"?"Le prochain scan du client ouvrira directement l’adresse web choisie.":"Le prochain scan avec l’appareil photo du client ouvrira la fiche de ce produit."}</p><a className="scanBtn simple" href={"/q/"+encodeURIComponent(token)}><b>{destination==="url"?"Tester la redirection":"Tester la fiche consommateur"}</b></a><a className="secondary full linkButton" href="/retailer/scan">Configurer une autre affiche</a></section></main>;
+ if(done)return <main className="retailerApp"><header className="retailerHead"><a className="retailerBack" href="/retailer">← Espace commerçant</a><span>Affiche · {tag?.label||token}</span></header><section className="retailerBody done"><div className="doneMark">✓</div><span className="eyebrow">AFFICHE CONFIGURÉE</span><h2>{destination==="url"?"Redirection web":(selected?.name||"Produit")}</h2><p>{destination==="url"?"Le prochain scan du client ouvrira directement l’adresse web choisie.":"Le prochain scan avec l’appareil photo du client ouvrira la fiche de ce produit."}</p><a className="scanBtn simple" href={"/q/"+encodeURIComponent(token)}><b>{destination==="url"?"Tester la redirection":"Tester la fiche consommateur"}</b></a><a className="secondary full linkButton" href="/retailer/scan">Configurer une autre affiche</a></section></main>;
 
  return <main className="retailerApp">
-  <header className="retailerHead"><span>Affiche · {tag?.label||token}</span></header>
+  <header className="retailerHead"><a className="retailerBack" href="/retailer">← Espace commerçant</a><span>Affiche · {tag?.label||token}</span></header>
   <section className="retailerBody">
    <span className="eyebrow">QR IDENTIFIÉ</span>
    <h2>Que doit ouvrir ce QR ?</h2>
