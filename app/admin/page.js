@@ -3,15 +3,16 @@ import {useEffect,useState} from "react";
 import {dashboard,createQr,createBrand,createCatalog,resetQr} from "../../lib/db";
 
 export default function Admin(){
+ const[unlocked,setUnlocked]=useState(false),[password,setPassword]=useState(""),[authError,setAuthError]=useState("");
  const[d,setD]=useState(null),[created,setCreated]=useState(""),[brandName,setBrandName]=useState(""),[brandWeb,setBrandWeb]=useState(""),[year,setYear]=useState("2027"),[catName,setCatName]=useState("EPOS 2027"),[source,setSource]=useState(""),[brandId,setBrandId]=useState(""),[eposFile,setEposFile]=useState(null),[importing,setImporting]=useState(false),[importMsg,setImportMsg]=useState(""),[qrQty,setQrQty]=useState("1"),[making,setMaking]=useState(false);
  const load=()=>dashboard().then(x=>{setD(x);if(!brandId&&x?.brands?.[0]?.id)setBrandId(x.brands[0].id)});
- useEffect(()=>{load()},[]);
+ useEffect(()=>{try{if(sessionStorage.getItem("admin_unlocked")==="1")setUnlocked(true)}catch{}},[]);\n useEffect(()=>{if(unlocked)load()},[unlocked]);\n function login(e){e.preventDefault();if(password==="123456"){try{sessionStorage.setItem("admin_unlocked","1")}catch{}setUnlocked(true);setAuthError("")}else setAuthError("Mot de passe incorrect.")}
  async function make(){if(making)return;setMaking(true);try{const qty=Math.max(1,Math.min(100,Number(qrQty)||1));let last="";for(let i=0;i<qty;i++)last=await createQr(null);setCreated(last);await load()}finally{setMaking(false)}}
  async function reset(token){if(!window.confirm("Réinitialiser cette affiche ? Elle redeviendra vierge."))return;await resetQr(token);await load()}
  async function addBrand(){if(!brandName.trim())return;await createBrand(brandName,brandWeb);setBrandName("");setBrandWeb("");await load()}
  async function addCatalog(){if(!brandId||!catName.trim())return;await createCatalog(brandId,year,catName,source);setSource("");await load()}
  async function importEpos(){if(!eposFile||!brandId)return;setImporting(true);setImportMsg("");const fd=new FormData();fd.append("file",eposFile);fd.append("brandId",brandId);fd.append("year",year);fd.append("name",catName);try{const r=await fetch("/api/epos/import",{method:"POST",body:fd});const x=await r.json();if(!r.ok)throw new Error(x.error||"Import impossible");setImportMsg("✓ "+x.imported+" produits importés depuis "+x.file);setEposFile(null);await load()}catch(e){setImportMsg("Erreur : "+e.message)}finally{setImporting(false)}}
- return <main className="portal"><Head/><section className="portalBody">
+ if(!unlocked)return <main className="portal"><header className="portalHead"><span>Administration</span></header><section className="portalBody adminLogin"><span className="eyebrow">ACCÈS PROTÉGÉ</span><h1>Administration</h1><form onSubmit={login} className="panel"><label>Mot de passe</label><input autoFocus type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••"/>{authError?<p className="scanError">{authError}</p>:null}<button className="primary full">Accéder</button></form></section></main>;\n return <main className="portal"><Head/><section className="portalBody">
   <span className="eyebrow">QRETAIL CONTROL CENTER</span><h1>Administration</h1><p className="intro">Créez le parc de QR physiques, les comptes marques et leurs sources produits. Aucun produit ni URL n'est nécessaire pour créer un QR.</p>
   {d&&<div className="kpis"><K n={d.brands.length} t="Marques"/><K n={d.catalogs.length} t="EPOS / catalogues"/><K n={d.qrs.length} t="QR physiques"/><K n={d.scans} t="Scans"/><K n={d.leads} t="Leads"/></div>}
   <div className="portalGrid">
@@ -26,5 +27,5 @@ export default function Admin(){
   <section className="panel wide"><div className="panelTop"><div><span className="eyebrow">PARC PHYSIQUE</span><h2>QR créés</h2></div><button className="primary" onClick={make}>+ Nouveau QR</button></div>{d?.qrs?.length?d.qrs.map((q,i)=><div className="row qrRow" key={q.id}><span><b>{q.label||"Affiche #"+String(i+1).padStart(3,"0")}</b><small>{q.token}</small></span><span className={q.product?"status configured":"status"}>{q.product||"Vierge · à configurer"}</span><span className="inlineActions"><a href={"/api/qr/"+q.token} download>PNG</a>{q.product?<button type="button" className="textBtn" onClick={()=>reset(q.token)}>Réinitialiser</button>:null}</span></div>):<p className="empty">Aucun QR. Créez le premier pour lancer le test.</p>}</section>
  </section></main>
 }
-function Head(){return <header className="portalHead"><a href="/mvp"><div className="logo darkLogo"><span>Q</span><span>R</span>etail</div></a><span>Admin · MVP</span></header>}
+function Head(){return <header className="portalHead"><span>Administration · MVP</span></header>}
 function K({n,t}){return <div><b>{n}</b><span>{t}</span></div>}
