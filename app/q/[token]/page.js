@@ -13,6 +13,7 @@ export default function Product(){
      const data=await getTag(t);
      if(!alive)return;
      setTag(data);
+     if(data?.destination_type==="url"&&data?.destination_url){track(data).catch(()=>{});window.location.replace(data.destination_url);return}
      if(data?.product_id){track(data).catch(()=>{});const m=data?.products?.model;if(m)getModelColorVariants(m,data?.products?.catalog_id||"").then(v=>{if(alive)setColorVariants(v)}).catch(()=>{})}
    }catch(e){console.error("CONSUMER_LOAD",e);if(alive)setError("Impossible de charger la fiche pour le moment.")}finally{if(alive)setLoading(false)}})();
    return()=>{alive=false};
